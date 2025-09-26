@@ -871,6 +871,22 @@
                 this.initElements();
                 this.initEventListeners();
                 this.restart();
+                // TypingTest クラス内のメソッドとして追加
+populateLevelTable() {
+    if (!this.levelTableBody) return;
+    this.levelTableBody.innerHTML = '';
+    for (const item of levelMap) {
+        const tr = document.createElement('tr');
+        const tdLevel = document.createElement('td');
+        tdLevel.textContent = item.level;
+        const tdKpm = document.createElement('td');
+        tdKpm.textContent = Math.round(item.kpm);
+        tr.appendChild(tdLevel);
+        tr.appendChild(tdKpm);
+        this.levelTableBody.appendChild(tr);
+    }
+}
+
             }
  // ----- レベル表を表示するユーティリティ -----
 function createLevelTable(levelArray) {
@@ -952,6 +968,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.restartBtn = document.getElementById('restartBtn');
                 this.restartBtnResults = document.getElementById('restartBtnResults');
                 this.progressFill = document.getElementById('progressFill');
+                // initElements() の末尾に追加
+                this.showLevelBtn = document.getElementById('showLevelBtn');
+                this.levelModal = document.getElementById('levelModal');
+                this.closeLevelBtn = document.getElementById('closeLevelBtn');
+                this.levelTableBody = document.querySelector('#levelTable tbody');
+
             }
 
             initEventListeners() {
@@ -970,6 +992,25 @@ window.addEventListener('resize', () => {
     this.calculateLines();
     this.adjustWordDisplayHeight();
 });
+                // initEventListeners() の末尾に追加
+if (this.showLevelBtn && this.levelModal) {
+    this.showLevelBtn.addEventListener('click', () => {
+        // テーブルを最新化してから表示
+        this.populateLevelTable();
+        this.levelModal.classList.add('show');
+    });
+}
+if (this.closeLevelBtn && this.levelModal) {
+    this.closeLevelBtn.addEventListener('click', () => {
+        this.levelModal.classList.remove('show');
+    });
+}
+if (this.levelModal) {
+    this.levelModal.addEventListener('click', (e) => {
+        if (e.target === this.levelModal) this.levelModal.classList.remove('show');
+    });
+}
+
 
             }
 
