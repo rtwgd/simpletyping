@@ -101,17 +101,19 @@
         }
 
         .word-display {
-            background: #2c2e31;
-            padding: 30px;
-            border-radius: 8px;
-            font-size: 1.8rem;
-            line-height: 2.2;
-            height: calc(1.8rem * 2.2 * 10 + 60px); /* 10 lines + padding */
-            border: 2px solid transparent;
-            transition: border-color 0.2s;
-            overflow: hidden;
-            position: relative;
-        }
+    background: #2c2e31;
+    padding: 30px;
+    border-radius: 8px;
+    font-size: 1.8rem;
+    line-height: 2.2;
+    height: auto;
+    max-height: calc( (1.8rem * 2.2) * 5 + 60px ); /* 最大5行分 + padding でクランプ */
+    border: 2px solid transparent;
+    transition: border-color 0.2s, height 0.2s ease;
+    overflow: hidden;
+    position: relative;
+}
+
 
         /* 変更: wordStream を絶対配置から相対配置へし、折り返しを有効にする */
 #wordStream {
