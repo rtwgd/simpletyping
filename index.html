@@ -844,6 +844,13 @@
                 this.timeLimitSelect.addEventListener('change', () => this.restart());
                 this.customTimeLimit.addEventListener('change', () => this.restart());
                 this.spaceToggle.addEventListener('change', () => this.restart());
+                // ウィンドウサイズが変わったら行数再計算と高さ調整を行う
+window.addEventListener('resize', () => {
+    // レイアウトが変わるため行割りを再計算して高さを再設定
+    this.calculateLines();
+    this.adjustWordDisplayHeight();
+});
+
             }
 
             getWordCount() {
