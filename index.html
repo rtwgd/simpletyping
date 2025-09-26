@@ -101,55 +101,55 @@
         }
 
         .word-display {
-    background: #2c2e31;
-    padding: 30px;
-    border-radius: 8px;
-    font-size: 1.8rem;
-    line-height: 2.2;
-    height: auto;
-    max-height: calc( (1.8rem * 2.2) * 5 + 60px ); /* 最大5行分 + padding でクランプ */
-    border: 2px solid transparent;
-    transition: border-color 0.2s, height 0.2s ease;
-    overflow: hidden;
-    position: relative;
-}
+            background: #2c2e31;
+            padding: 30px;
+            border-radius: 8px;
+            font-size: 1.8rem;
+            line-height: 2.2;
+            height: auto;
+            max-height: calc( (1.8rem * 2.2) * 5 + 60px ); /* 最大5行分 + padding でクランプ */
+            border: 2px solid transparent;
+            transition: border-color 0.2s, height 0.2s ease;
+            overflow: hidden;
+            position: relative;
+        }
 
 
         /* 変更: wordStream を絶対配置から相対配置へし、折り返しを有効にする */
-#wordStream {
-    position: relative; /* absolute -> relative に変更 */
-    width: 100%;
-    transition: transform 0.3s ease-in-out;
-    white-space: normal; /* 折り返し有効化 */
-    word-break: break-word;
-    display: block; /* 各 .word は inline-block のまま折り返される */
-}
+        #wordStream {
+            position: relative; /* absolute -> relative に変更 */
+            width: 100%;
+            transition: transform 0.3s ease-in-out;
+            white-space: normal; /* 折り返し有効化 */
+            word-break: break-word;
+            display: block; /* 各 .word は inline-block のまま折り返される */
+        }
 
-/* word-display の高さは JS で動的に決めるため min/max を指定しておく */
-.word-display {
-    background: #2c2e31;
-    padding: 30px;
-    border-radius: 8px;
-    font-size: 1.8rem;
-    line-height: 2.2;
-    /* 固定高さの calc() を削除して自動に。JS で height を上書きします */
-    height: auto;
-    max-height: 80vh; /* 極端に大きくならないように上限を設定 */
-    border: 2px solid transparent;
-    transition: border-color 0.2s, height 0.2s ease;
-    overflow: hidden;
-    position: relative;
-}
+        /* word-display の高さは JS で動的に決めるため min/max を指定しておく */
+        .word-display {
+            background: #2c2e31;
+            padding: 30px;
+            border-radius: 8px;
+            font-size: 1.8rem;
+            line-height: 2.2;
+            /* 固定高さの calc() を削除して自動に。JS で height を上書きします */
+            height: auto;
+            max-height: 80vh; /* 極端に大きくならないように上限を設定 */
+            border: 2px solid transparent;
+            transition: border-color 0.2s, height 0.2s ease;
+            overflow: hidden;
+            position: relative;
+        }
 
-/* 各ワード要素が枠の右にはみ出すことを防ぐ */
-.word {
-    display: inline-block;
-    margin-right: 1rem;
-    margin-bottom: 0.5rem;
-    transition: color 0.2s;
-    max-width: 100%;
-    box-sizing: border-box;
-}
+        /* 各ワード要素が枠の右にはみ出すことを防ぐ */
+        .word {
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+            transition: color 0.2s;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
 
 
         .word.current {
@@ -291,6 +291,45 @@
             width: 0%;
             transition: width 0.3s ease;
         }
+
+        /* --- Level Chart Styles --- */
+        .level-chart {
+            max-width: 800px;
+            width: 100%;
+            margin-top: 60px;
+            padding-bottom: 40px;
+            text-align: center;
+        }
+
+        .level-chart h2 {
+            color: #e2b714;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+
+        .level-chart table {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .level-chart th, .level-chart td {
+            padding: 12px 15px;
+            border: 1px solid #646669;
+        }
+
+        .level-chart th {
+            background-color: #2c2e31;
+            color: #e2b714;
+            font-weight: bold;
+        }
+
+        .level-chart tr:nth-child(even) {
+            background-color: #2c2e31;
+        }
     </style>
 </head>
 <body>
@@ -359,6 +398,22 @@
             <span id="timer" class="stat-value">60</span>
             <span class="stat-label">時間</span>
         </div>
+    </div>
+
+    <!-- Level Chart Section -->
+    <div class="level-chart">
+        <h2>レベル一覧</h2>
+        <table id="levelTable">
+            <thead>
+                <tr>
+                    <th>Level</th>
+                    <th>KPM (キー毎分)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- JSで生成されます -->
+            </tbody>
+        </table>
     </div>
 
     <div id="results" class="results">
@@ -464,36 +519,51 @@
         function devideIntoChunk(kana) {
             const ret = [];
             for (let i = 0; i < kana.length; ++i) {
+                // 最後の1文字ならそのまま追加
                 if (i >= kana.length - 1) {
                     ret.push(new Chunk(kana[i]));
                     break;
                 }
-                if (kana[i] !== "っ" && kana[i] !== "ん") {
-                    if (!ChunkPattern.list.has(kana[i] + kana[i + 1])) {
-                        ret.push(new Chunk(kana[i]));
-                    }
-                    else {
-                        ret.push(new Chunk(kana[i] + kana[i + 1]));
+
+                const cur = kana[i];
+                const next = kana[i + 1];
+                const next2 = kana[i + 2];
+
+                // 普通の（促音/撥音以外の）処理
+                if (cur !== "っ" && cur !== "ん") {
+                    // 拗音などの2文字パターンが存在すれば2文字チャンク
+                    if (ChunkPattern.list.has(cur + next)) {
+                        ret.push(new Chunk(cur + next));
                         ++i;
+                    } else {
+                        ret.push(new Chunk(cur));
                     }
+                    continue;
                 }
-                else {
-                    if (i >= kana.length - 2) {
-                        ret.push(new Chunk(kana[i] + kana[i + 1]));
-                        break;
-                    }
-                    if (!ChunkPattern.list.has(kana[i + 1] + kana[i + 2])) {
-                        ret.push(new Chunk(kana[i] + kana[i + 1]));
-                        ++i;
-                    }
-                    else {
-                        ret.push(new Chunk(kana[i] + kana[i + 1] + kana[i + 2]));
-                        i += 2;
-                    }
+
+                // ここから cur が "っ" または "ん" の処理
+                // 末尾に近ければ、安全に残りを1チャンクにする
+                if (i >= kana.length - 2) {
+                    // 残りが2文字ならそれを結合して1チャンクに（例: "っ" + 最後の仮名）
+                    ret.push(new Chunk(cur + next));
+                    if (i === kana.length - 2) ++i;
+                    break;
+                }
+
+                // next + next2 がチャンクとして存在するか（拗音など）
+                if (ChunkPattern.list.has(next + next2)) {
+                    // 例: "っ" + "きゃ" -> "っきゃ"
+                    ret.push(new Chunk(cur + next + next2));
+                    i += 2;
+                } else {
+                    // next 単体がチャンクとして存在する場合（普通の仮名）
+                    ret.push(new Chunk(cur + next));
+                    ++i;
                 }
             }
             return ret;
         }
+
 
         class TypePattern {
             constructor(romanList) {
@@ -680,71 +750,62 @@
                 this.chunks = devideIntoChunk(kana);
                 this.chunkIndex = 0;
             }
-
-                                    update(key) {
+// --- 以下のコードに全体を置き換えてください ---
+            update(key) {
                 if (this.isFinished()) return { isCorrect: false };
 
                 const currentChunk = this.chunks[this.chunkIndex];
-                // 普通の更新をまず試す
-                let isCorrect = currentChunk.update(key);
+                // まずは通常の更新を試す
+                const isCorrect = currentChunk.update(key);
 
-                // もし通常更新で不正と判定され、かつ現在チャンクが促音（っ）を先頭に持つとき、
-                // 次チャンクの期待する先頭文字が今回の入力キーと一致すれば促音処理を強制する
-                if (!isCorrect) {
-                    const nextChunk = this.chunks[this.chunkIndex + 1];
-                    if (currentChunk && typeof currentChunk.kana === 'string' && currentChunk.kana[0] === 'っ' && nextChunk) {
-                        try {
-                            const tplContainer = nextChunk._typePatternList;
-                            const tpl = tplContainer && tplContainer._typePatternList;
-                            if (tpl && tpl.length > 0) {
-                                // nextChunk のいずれかの TypePattern が現在期待している文字（getCurChar）が key と一致するかを調べる
-                                let matchNextFirstChar = false;
-                                for (const tp of tpl) {
-                                    const c = (tp.getCurChar && tp.getCurChar()) || '';
-                                    if (c === key) {
-                                        matchNextFirstChar = true;
-                                        break;
-                                    }
-                                }
-                                if (matchNextFirstChar) {
-                                    // --- ここで促音チャンクを強制的に完了扱いにする ---
-                                    // currentChunk._kanaCount を直接操作して促音を完了させる
-                                    // （Chunk クラスのゲッターは kanaCount を参照しているため、これで完了扱いになる）
-                                    try {
-                                        currentChunk._kanaCount = currentChunk._kana.length;
-                                    } catch (e) {
-                                        // 何か失敗しても先に進めないだけなので無視
-                                    }
-                                    // chunkIndex を進めて次チャンクに移る
-                                    this.chunkIndex++;
+                // 通常の更新で正解だった場合、または不正解でも促音の特別処理が不要な場合は、
+                // チャンクが完了したかチェックして先に進む
+                if (isCorrect || !currentChunk.kana.startsWith('っ')) {
+                    if (currentChunk.isChunkFinished) { // 正しいプロパティアクセス
+                        this.chunkIndex++;
+                    }
+                    return { isCorrect, isFinished: this.isFinished() };
+                }
 
-                                    // 同じ key を次チャンクへ再帰的に適用して消費させる
-                                    if (!this.isFinished()) {
-                                        return this.update(key);
-                                    } else {
-                                        // 次チャンクが存在しない場合は成功扱いにする
-                                        return { isCorrect: true, isFinished: this.isFinished() };
-                                    }
+                // --- ここからが促音「っ」の特別処理 ---
+                // 通常更新で不正解(isCorrect=false) かつ、現在のチャンクが「っ」で始まる場合
+                const nextChunk = this.chunks[this.chunkIndex + 1];
+
+                // 次のチャンクが存在し、その先頭文字が今回のキー入力と一致する場合
+                // (例：「かって」で「か」の次に「t」を入力した状況)
+                if (nextChunk) {
+                    try {
+                        // 次のチャンクが期待するローマ字の最初の文字を取得
+                        const tplContainer = nextChunk._typePatternList;
+                        const tpl = tplContainer && tplContainer._typePatternList;
+                        if (tpl && tpl.length > 0) {
+                             // いずれかのパターンがキーと一致するかチェック
+                            let matchNextFirstChar = false;
+                            for (const tp of tpl) {
+                                if (tp.isValid && (tp.getCurChar() === key)) {
+                                    matchNextFirstChar = true;
+                                    break;
                                 }
                             }
-                        } catch (err) {
-                            // 内部アクセスに失敗した場合は通常の不正扱いに落とす
+
+                            if (matchNextFirstChar) {
+                                // 現在の促音チャンクを強制的に完了させ、インデックスを進める
+                                currentChunk._kanaCount = currentChunk.kana.length;
+                                this.chunkIndex++;
+                                // 同じキーで、次のチャンクに対して再度updateを呼び出す（再帰処理）
+                                return this.update(key);
+                            }
                         }
+                    } catch (e) {
+                        // エラーが発生した場合は、単純に不正解として返す
+                        return { isCorrect: false, isFinished: this.isFinished() };
                     }
                 }
-
-                // currentChunk が完了していれば index を進める（通常経路）
-                if (currentChunk.isChunkFinished) {
-                    this.chunkIndex++;
-                }
-
-                return {
-                    isCorrect,
-                    isFinished: this.isFinished(),
-                };
+                
+                // どの条件にも当てはまらなかった場合（単純なタイプミスなど）
+                // 最初の判定結果(isCorrect = false)を返す
+                return { isCorrect, isFinished: this.isFinished() };
             }
-
-
 
             isFinished() {
                 return this.chunkIndex >= this.chunks.length;
@@ -845,11 +906,11 @@
                 this.customTimeLimit.addEventListener('change', () => this.restart());
                 this.spaceToggle.addEventListener('change', () => this.restart());
                 // ウィンドウサイズが変わったら行数再計算と高さ調整を行う
-window.addEventListener('resize', () => {
-    // レイアウトが変わるため行割りを再計算して高さを再設定
-    this.calculateLines();
-    this.adjustWordDisplayHeight();
-});
+                window.addEventListener('resize', () => {
+                    // レイアウトが変わるため行割りを再計算して高さを再設定
+                    this.calculateLines();
+                    this.adjustWordDisplayHeight();
+                });
 
             }
 
@@ -900,23 +961,95 @@ window.addEventListener('resize', () => {
 
                 const result = this.wordTyper.update(key);
 
-                if (result.isCorrect) {
+                let isCorrectInput = result.isCorrect;
+                
+                // 修正: 正解/不正解をカウント
+                if (isCorrectInput) {
                     this.correctTypedKeys++;
                 } else {
                     this.incorrectChars++;
                 }
-
+                
+                // ----------------------------------------------------
+                // ★★★ 暫定的な単語完了の自動補完ロジックを追加 ★★★
+                // ----------------------------------------------------
                 const typedKana = this.wordTyper.getTypedKana();
-                const boundary = this.wordBoundaries.find(b => typedKana.length === b.endIndex);
-
-                if (boundary) {
-                    if (!this.spaceToggle.checked) {
-                        if (this.fullKanaString[typedKana.length] === '　') {
-                            this.wordTyper.update(' ');
-                            this.correctTypedKeys++;
+                const totalKanaLength = this.fullKanaString.length;
+                
+                // 誤答判定であり、かつ単語の終端に近い場合（例: 最後3文字以内）
+                if (!isCorrectInput && !this.spaceToggle.checked && typedKana.length > totalKanaLength - 3 && typedKana.length < totalKanaLength) {
+                    
+                    // 次の単語に進むために、強制的に残りのカナを入力済みにする
+                    // （これは最後の単語にのみ影響します）
+                    
+                    // 単語の境界を見つける
+                    const currentBoundaryIndex = this.wordBoundaries.findIndex(b => typedKana.length < b.endIndex);
+                    if (currentBoundaryIndex !== -1) {
+                        const currentBoundary = this.wordBoundaries[currentBoundaryIndex];
+                        // 最後の単語まで来ている場合、残りのカナを強制的に完了させる
+                        if (currentBoundary.endIndex > typedKana.length) {
+                             // ここでは WordTyper の状態を直接変更せず、以下のスペース自動入力に任せる
                         }
                     }
                 }
+                // ----------------------------------------------------
+                // ★★★ 暫定的な単語完了の自動補完ロジックの終わり ★★★
+                // ----------------------------------------------------
+
+
+                // 単語が完了したかどうかのチェック (元のロジック)
+                // 誤答であっても、現在の入力文字数が単語の境界に達していればOKとする
+                // ただし、これは誤答時に `typedKana` が進まないため機能しません。
+                // そこで、強制的に次の単語の先頭にいるかチェックします。
+
+                // 単語の境界に達しているかを判定する新しい基準
+                // (これは `boundary` の定義をそのまま使用します)
+                const boundary = this.wordBoundaries.find(b => b.endIndex === typedKana.length);
+
+
+                if (!this.wordTyper.isFinished() && !this.spaceToggle.checked) {
+                    
+                    // 誤答であっても、現在のチャンクが単語の最後のチャンクであれば、
+                    // 強制的に単語全体を完了させてスペースを入力するようにします。
+                    
+                    let shouldAutoAdvance = false;
+                    
+                    // 1. 正しく単語の終端に到達した (boundary が見つかる)
+                    if (boundary) {
+                        shouldAutoAdvance = true;
+                    } 
+                    // 2. 促音を含む単語の最後に近く、入力文字数が単語の長さから2文字以内の場所でミスした
+                    else if (!isCorrectInput) {
+                         // 現在のカーソル位置の前にある単語の境界を見つける
+                        const currentWordBoundary = this.wordBoundaries.find(b => typedKana.length <= b.endIndex && typedKana.length >= b.startIndex);
+                        
+                        if (currentWordBoundary) {
+                            const remaining = currentWordBoundary.endIndex - typedKana.length;
+                            // 単語の残り文字数が少ない状態でミスした場合、自動完了を試みる
+                            if (remaining <= 2 && remaining > 0) {
+                                shouldAutoAdvance = true;
+                                
+                                // ここで強制的にカナ数を進める処理
+                                this.wordTyper.chunks[this.wordTyper.chunkIndex]._kanaCount = 
+                                    this.wordTyper.chunks[this.wordTyper.chunkIndex].kana.length;
+                                this.wordTyper.chunkIndex++;
+                                
+                                // 強制完了後、新しい typedKana を再計算
+                                typedKana = this.wordTyper.getTypedKana();
+                            }
+                        }
+                    }
+
+                    // 最終的に自動進行のフラグが立ったら、スペースを強制入力
+                    if (shouldAutoAdvance && this.fullKanaString[typedKana.length] === '　') {
+                        // 2回 update を呼び出すことで、次の単語のスペースのチャンクも完了させる
+                        this.wordTyper.update(' '); 
+                        this.correctTypedKeys++;
+                        // 自動入力が成功したら、次の単語の先頭をハイライトするために updateWordHighlight を呼び出す
+                        this.updateWordHighlight(); 
+                    }
+                }
+                
 
                 this.updateScrolling();
                 this.updateWordHighlight();
@@ -929,165 +1062,165 @@ window.addEventListener('resize', () => {
             }
 
             // --- generateWords の置換版 ---
-generateWords() {
-    const wordCount = this.getWordCount();
-    this.words = this.allWords.sort(() => 0.5 - Math.random()).slice(0, wordCount);
+            generateWords() {
+                const wordCount = this.getWordCount();
+                this.words = this.allWords.sort(() => 0.5 - Math.random()).slice(0, wordCount);
 
-    this.wordBoundaries = [];
-    let currentKanaLength = 0;
+                this.wordBoundaries = [];
+                let currentKanaLength = 0;
 
-    const kanaParts = this.words.map(w => w.kana.join(''));
-    this.fullKanaString = kanaParts.join('　');
+                const kanaParts = this.words.map(w => w.kana.join(''));
+                this.fullKanaString = kanaParts.join('　');
 
-    // クリア
-    this.wordStream.innerHTML = '';
+                // クリア
+                this.wordStream.innerHTML = '';
 
-    // 一旦すべての単語を追加してから行レイアウト（折り返し）を評価する
-    this.words.forEach((word, index) => {
-        const wordEl = document.createElement('span');
-        wordEl.id = `word-span-${index}`;
-        wordEl.className = 'word';
-        wordEl.textContent = word.text;
-        this.wordStream.appendChild(wordEl);
-        // DOM 上で単語と単語の間にスペースを入れる（見た目用）
-        const space = document.createTextNode(' ');
-        this.wordStream.appendChild(space);
+                // 一旦すべての単語を追加してから行レイアウト（折り返し）を評価する
+                this.words.forEach((word, index) => {
+                    const wordEl = document.createElement('span');
+                    wordEl.id = `word-span-${index}`;
+                    wordEl.className = 'word';
+                    wordEl.textContent = word.text;
+                    this.wordStream.appendChild(wordEl);
+                    // DOM 上で単語と単語の間にスペースを入れる（見た目用）
+                    const space = document.createTextNode(' ');
+                    this.wordStream.appendChild(space);
 
-        const kanaLength = kanaParts[index].length;
-        this.wordBoundaries.push({
-            startIndex: currentKanaLength,
-            endIndex: currentKanaLength + kanaLength,
-            element: wordEl
-        });
-        currentKanaLength += kanaLength + 1; // +1 for the space in fullKanaString
-    });
+                    const kanaLength = kanaParts[index].length;
+                    this.wordBoundaries.push({
+                        startIndex: currentKanaLength,
+                        endIndex: currentKanaLength + kanaLength,
+                        element: wordEl
+                    });
+                    currentKanaLength += kanaLength + 1; // +1 for the space in fullKanaString
+                });
 
-    // WordTyper を作る前にレイアウト情報を確定する
-    this.calculateLines();
+                // WordTyper を作る前にレイアウト情報を確定する
+                this.calculateLines();
 
-    this.wordTyper = new WordTyper(this.fullKanaString);
+                this.wordTyper = new WordTyper(this.fullKanaString);
 
-    // 表示枠の高さを単語行数に応じて調整する
-    this.adjustWordDisplayHeight();
+                // 表示枠の高さを単語行数に応じて調整する
+                this.adjustWordDisplayHeight();
 
-    this.updateScrolling();
-    this.updateWordHighlight();
-}
+                this.updateScrolling();
+                this.updateWordHighlight();
+            }
 
-// --- calculateLines の置換版 ---
-calculateLines() {
-    // lineBreakWordIndices を行の開始単語インデックスで作る
-    this.lineBreakWordIndices = [0];
-    const wordSpans = Array.from(this.wordStream.querySelectorAll('.word'));
-    if (wordSpans.length === 0) return;
+            // --- calculateLines の置換版 ---
+            calculateLines() {
+                // lineBreakWordIndices を行の開始単語インデックスで作る
+                this.lineBreakWordIndices = [0];
+                const wordSpans = Array.from(this.wordStream.querySelectorAll('.word'));
+                if (wordSpans.length === 0) return;
 
-    let lastOffsetTop = wordSpans[0].offsetTop;
-    for (let i = 1; i < wordSpans.length; i++) {
-        const t = wordSpans[i].offsetTop;
-        // offsetTop が変化したら改行が発生したとみなす
-        if (t > lastOffsetTop + 1) { // 微小差を吸収
-            this.lineBreakWordIndices.push(i);
-            lastOffsetTop = t;
-        }
-    }
-    // 最後の行も意識しておく（行数を容易に算出するため）
-    // lineBreakWordIndices 配列は各行の先頭 word index を保持する
-}
+                let lastOffsetTop = wordSpans[0].offsetTop;
+                for (let i = 1; i < wordSpans.length; i++) {
+                    const t = wordSpans[i].offsetTop;
+                    // offsetTop が変化したら改行が発生したとみなす
+                    if (t > lastOffsetTop + 1) { // 微小差を吸収
+                        this.lineBreakWordIndices.push(i);
+                        lastOffsetTop = t;
+                    }
+                }
+                // 最後の行も意識しておく（行数を容易に算出するため）
+                // lineBreakWordIndices 配列は各行の先頭 word index を保持する
+            }
 
-// --- 新規追加メソッド: 表示枠高さ調整 ---
-// 既存の adjustWordDisplayHeight() をこの実装に置き換えてください
-adjustWordDisplayHeight() {
-    const MAX_LINES = 5;
+            // --- 新規追加メソッド: 表示枠高さ調整 ---
+            // 既存の adjustWordDisplayHeight() をこの実装に置き換えてください
+            adjustWordDisplayHeight() {
+                const MAX_LINES = 5;
 
-    if (!this.lineBreakWordIndices || this.lineBreakWordIndices.length === 0) {
-        this.wordDisplay.style.height = '';
-        return;
-    }
+                if (!this.lineBreakWordIndices || this.lineBreakWordIndices.length === 0) {
+                    this.wordDisplay.style.height = '';
+                    return;
+                }
 
-    // 行数を取得（lineBreakWordIndices は各行の先頭単語インデックス）
-    const lineCount = this.lineBreakWordIndices.length;
+                // 行数を取得（lineBreakWordIndices は各行の先頭単語インデックス）
+                const lineCount = this.lineBreakWordIndices.length;
 
-    // 実際に使用する行数は lineCount と MAX_LINES の小さい方
-    const usedLines = Math.min(lineCount, MAX_LINES);
+                // 実際に使用する行数は lineCount と MAX_LINES の小さい方
+                const usedLines = Math.min(lineCount, MAX_LINES);
 
-    // 行高(px)を取得する。まず wordStream 内の最初の word 要素から取得を試みる
-    let lineHeightPx = 0;
-    const sampleEl = this.wordStream.querySelector('.word');
-    if (sampleEl) {
-        const cs = getComputedStyle(sampleEl);
-        lineHeightPx = parseFloat(cs.lineHeight) || 0;
-    }
-    if (!lineHeightPx) {
-        const cs2 = getComputedStyle(this.wordDisplay);
-        lineHeightPx = parseFloat(cs2.lineHeight) || parseFloat(cs2.fontSize) * 2.2 || 40;
-    }
+                // 行高(px)を取得する。まず wordStream 内の最初の word 要素から取得を試みる
+                let lineHeightPx = 0;
+                const sampleEl = this.wordStream.querySelector('.word');
+                if (sampleEl) {
+                    const cs = getComputedStyle(sampleEl);
+                    lineHeightPx = parseFloat(cs.lineHeight) || 0;
+                }
+                if (!lineHeightPx) {
+                    const cs2 = getComputedStyle(this.wordDisplay);
+                    lineHeightPx = parseFloat(cs2.lineHeight) || parseFloat(cs2.fontSize) * 2.2 || 40;
+                }
 
-    // wordDisplay の上下 padding を考慮
-    const wdCs = getComputedStyle(this.wordDisplay);
-    const paddingTop = parseFloat(wdCs.paddingTop) || 0;
-    const paddingBottom = parseFloat(wdCs.paddingBottom) || 0;
-    const extra = 6; // 微調整用余白(px)
+                // wordDisplay の上下 padding を考慮
+                const wdCs = getComputedStyle(this.wordDisplay);
+                const paddingTop = parseFloat(wdCs.paddingTop) || 0;
+                const paddingBottom = parseFloat(wdCs.paddingBottom) || 0;
+                const extra = 6; // 微調整用余白(px)
 
-    // 計算：使用行数 * 行高 + padding + 余白
-    const desiredHeight = Math.min(
-        usedLines * lineHeightPx + paddingTop + paddingBottom + extra,
-        // CSS 側の max-height でも上限がかかるためウィンドウ高さベースの安全上限も設定
-        window.innerHeight * 0.8
-    );
+                // 計算：使用行数 * 行高 + padding + 余白
+                const desiredHeight = Math.min(
+                    usedLines * lineHeightPx + paddingTop + paddingBottom + extra,
+                    // CSS 側の max-height でも上限がかかるためウィンドウ高さベースの安全上限も設定
+                    window.innerHeight * 0.8
+                );
 
-    this.wordDisplay.style.height = `${Math.round(desiredHeight)}px`;
-}
+                this.wordDisplay.style.height = `${Math.round(desiredHeight)}px`;
+            }
 
 
             // --- 置換する関数開始 ---
-updateWordHighlight() {
-    const typedLength = this.wordTyper.getTypedKana().length;
-    let currentWordIndex = -1;
+            updateWordHighlight() {
+                const typedLength = this.wordTyper.getTypedKana().length;
+                let currentWordIndex = -1;
 
-    this.wordBoundaries.forEach((boundary, index) => {
-        boundary.element.classList.remove('current');
-        if (typedLength >= boundary.startIndex && typedLength < boundary.endIndex) {
-            boundary.element.classList.add('current');
-            currentWordIndex = index;
-        }
-    });
+                this.wordBoundaries.forEach((boundary, index) => {
+                    boundary.element.classList.remove('current');
+                    if (typedLength >= boundary.startIndex && typedLength < boundary.endIndex) {
+                        boundary.element.classList.add('current');
+                        currentWordIndex = index;
+                    }
+                });
 
-    if (currentWordIndex === -1 && typedLength >= this.fullKanaString.length) {
-        this.wordBoundaries[this.wordBoundaries.length - 1].element.classList.add('current');
-        currentWordIndex = this.wordBoundaries.length - 1;
-    }
+                if (currentWordIndex === -1 && typedLength >= this.fullKanaString.length) {
+                    this.wordBoundaries[this.wordBoundaries.length - 1].element.classList.add('current');
+                    currentWordIndex = this.wordBoundaries.length - 1;
+                }
 
-    if (currentWordIndex > -1) {
-        // 現在の単語が属する行番号を求める
-        const currentLine = this.lineBreakWordIndices.findLastIndex(lineStartIndex => currentWordIndex >= lineStartIndex);
+                if (currentWordIndex > -1) {
+                    // 現在の単語が属する行番号を求める
+                    const currentLine = this.lineBreakWordIndices.findLastIndex(lineStartIndex => currentWordIndex >= lineStartIndex);
 
-        // 新仕様：奇数行（line index が 1,3,5...）に到達したら「一段上」にスクロールする
-        // 例：currentLine === 1 のときは 0 行目を表示するために一段上にずらす
-        // lastScrolledLine には最後にスクロールした「基準となる行番号」を保持して重複スクロールを防ぐ
-        if (currentLine >= 1 && (currentLine % 2) === 1) {
-            // スクロール先の行インデックス（表示のトップに持ってくる行の start index）
-            const scrollToLineIndex = currentLine - 1;
+                    // 新仕様：奇数行（line index が 1,3,5...）に到達したら「一段上」にスクロールする
+                    // 例：currentLine === 1 のときは 0 行目を表示するために一段上にずらす
+                    // lastScrolledLine には最後にスクロールした「基準となる行番号」を保持して重複スクロールを防ぐ
+                    if (currentLine >= 1 && (currentLine % 2) === 1) {
+                        // スクロール先の行インデックス（表示のトップに持ってくる行の start index）
+                        const scrollToLineIndex = currentLine - 1;
 
-            // 同じスクロール先に既に移動済みであれば何もしない
-            if (this.lastScrolledLine !== scrollToLineIndex) {
-                const firstWordIndexOfTargetLine = this.lineBreakWordIndices[scrollToLineIndex];
-                const firstWordEl = this.wordBoundaries[firstWordIndexOfTargetLine].element;
-                const scrollAmount = firstWordEl.offsetTop - this.wordBoundaries[0].element.offsetTop;
-                this.wordStream.style.transform = `translateY(-${scrollAmount}px)`;
-                this.lastScrolledLine = scrollToLineIndex;
+                        // 同じスクロール先に既に移動済みであれば何もしない
+                        if (this.lastScrolledLine !== scrollToLineIndex) {
+                            const firstWordIndexOfTargetLine = this.lineBreakWordIndices[scrollToLineIndex];
+                            const firstWordEl = this.wordBoundaries[firstWordIndexOfTargetLine].element;
+                            const scrollAmount = firstWordEl.offsetTop - this.wordBoundaries[0].element.offsetTop;
+                            this.wordStream.style.transform = `translateY(-${scrollAmount}px)`;
+                            this.lastScrolledLine = scrollToLineIndex;
+                        }
+                    } else {
+                        // currentLine が偶数か 0 のときはトップに戻す（必要なら）
+                        // ただし既にスクロールしていなければ何もしない
+                        if (currentLine === 0 && this.lastScrolledLine !== 0) {
+                            this.wordStream.style.transform = `translateY(0px)`;
+                            this.lastScrolledLine = 0;
+                        }
+                        // その他（偶数行でかつ lastScrolledLine が別の値の場合はスクロールを維持したいので何もしない）
+                    }
+                }
             }
-        } else {
-            // currentLine が偶数か 0 のときはトップに戻す（必要なら）
-            // ただし既にスクロールしていなければ何もしない
-            if (currentLine === 0 && this.lastScrolledLine !== 0) {
-                this.wordStream.style.transform = `translateY(0px)`;
-                this.lastScrolledLine = 0;
-            }
-            // その他（偶数行でかつ lastScrolledLine が別の値の場合はスクロールを維持したいので何もしない）
-        }
-    }
-}
-// --- 置換する関数終了 ---
+            // --- 置換する関数終了 ---
 
 
             updateScrolling() {
@@ -1201,6 +1334,22 @@ updateWordHighlight() {
             }
         }
 
+        function populateLevelChart() {
+            const tableBody = document.querySelector('#levelTable tbody');
+            if (!tableBody) return;
+
+            let tableContent = '';
+            levelMap.forEach(item => {
+                tableContent += `
+                    <tr>
+                        <td>${item.level}</td>
+                        <td>${item.kpm >= 1000 ? Math.round(item.kpm) : item.kpm.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            tableBody.innerHTML = tableContent;
+        }
+
         async function init() {
             try {
                 const response = await fetch('khjy.json');
@@ -1215,7 +1364,10 @@ updateWordHighlight() {
             }
         }
 
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            populateLevelChart();
+        });
     })();
     </script>
 </body>
