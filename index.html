@@ -919,53 +919,115 @@
                 this.updateStats();
             }
 
-            generateWords() {
-                const wordCount = this.getWordCount();
-                this.words = this.allWords.sort(() => 0.5 - Math.random()).slice(0, wordCount);
-                
-                this.wordBoundaries = [];
-                let currentKanaLength = 0;
-                
-                const kanaParts = this.words.map(w => w.kana.join(''));
-                this.fullKanaString = kanaParts.join('　');
+            // --- generateWords の置換版 ---
+generateWords() {
+    const wordCount = this.getWordCount();
+    this.words = this.allWords.sort(() => 0.5 - Math.random()).slice(0, wordCount);
 
-                this.wordStream.innerHTML = '';
-                this.words.forEach((word, index) => {
-                    const wordEl = document.createElement('span');
-                    wordEl.id = `word-span-${index}`;
-                    wordEl.className = 'word';
-                    wordEl.textContent = word.text;
-                    this.wordStream.appendChild(wordEl);
-                    this.wordStream.append(' ');
+    this.wordBoundaries = [];
+    let currentKanaLength = 0;
 
-                    const kanaLength = kanaParts[index].length;
-                    this.wordBoundaries.push({
-                        startIndex: currentKanaLength,
-                        endIndex: currentKanaLength + kanaLength,
-                        element: wordEl
-                    });
-                    currentKanaLength += kanaLength + 1; // +1 for the space
-                });
+    const kanaParts = this.words.map(w => w.kana.join(''));
+    this.fullKanaString = kanaParts.join('　');
 
-                this.wordTyper = new WordTyper(this.fullKanaString);
-                this.calculateLines();
-                this.updateScrolling();
-                this.updateWordHighlight();
-            }
+    // クリア
+    this.wordStream.innerHTML = '';
 
-            calculateLines() {
-                this.lineBreakWordIndices = [0];
-                const wordSpans = this.wordStream.querySelectorAll('.word');
-                if (wordSpans.length === 0) return;
+    // 一旦すべての単語を追加してから行レイアウト（折り返し）を評価する
+    this.words.forEach((word, index) => {
+        const wordEl = document.createElement('span');
+        wordEl.id = `word-span-${index}`;
+        wordEl.className = 'word';
+        wordEl.textContent = word.text;
+        this.wordStream.appendChild(wordEl);
+        // DOM 上で単語と単語の間にスペースを入れる（見た目用）
+        const space = document.createTextNode(' ');
+        this.wordStream.appendChild(space);
 
-                let lastOffsetTop = wordSpans[0].offsetTop;
-                for (let i = 1; i < wordSpans.length; i++) {
-                    if (wordSpans[i].offsetTop > lastOffsetTop) {
-                        this.lineBreakWordIndices.push(i);
-                        lastOffsetTop = wordSpans[i].offsetTop;
-                    }
-                }
-            }
+        const kanaLength = kanaParts[index].length;
+        this.wordBoundaries.push({
+            startIndex: currentKanaLength,
+            endIndex: currentKanaLength + kanaLength,
+            element: wordEl
+        });
+        currentKanaLength += kanaLength + 1; // +1 for the space in fullKanaString
+    });
+
+    // WordTyper を作る前にレイアウト情報を確定する
+    this.calculateLines();
+
+    this.wordTyper = new WordTyper(this.fullKanaString);
+
+    // 表示枠の高さを単語行数に応じて調整する
+    this.adjustWordDisplayHeight();
+
+    this.updateScrolling();
+    this.updateWordHighlight();
+}
+
+// --- calculateLines の置換版 ---
+calculateLines() {
+    // lineBreakWordIndices を行の開始単語インデックスで作る
+    this.lineBreakWordIndices = [0];
+    const wordSpans = Array.from(this.wordStream.querySelectorAll('.word'));
+    if (wordSpans.length === 0) return;
+
+    let lastOffsetTop = wordSpans[0].offsetTop;
+    for (let i = 1; i < wordSpans.length; i++) {
+        const t = wordSpans[i].offsetTop;
+        // offsetTop が変化したら改行が発生したとみなす
+        if (t > lastOffsetTop + 1) { // 微小差を吸収
+            this.lineBreakWordIndices.push(i);
+            lastOffsetTop = t;
+        }
+    }
+    // 最後の行も意識しておく（行数を容易に算出するため）
+    // lineBreakWordIndices 配列は各行の先頭 word index を保持する
+}
+
+// --- 新規追加メソッド: 表示枠高さ調整 ---
+adjustWordDisplayHeight() {
+    // lineBreakWordIndices が空ならデフォルト高さにする
+    if (!this.lineBreakWordIndices || this.lineBreakWordIndices.length === 0) {
+        // デフォルトの高さ（2行表示相当など）を設定しておく
+        this.wordDisplay.style.height = '';
+        return;
+    }
+
+    // 行数を計算
+    const lineCount = this.lineBreakWordIndices.length;
+    // 単語要素の一つから行の実際の高さ（px）を取得する
+    const sampleEl = this.wordStream.querySelector('.word');
+    // フォールバック：wordDisplay の行高スタイルを使う
+    let lineHeightPx = 0;
+    if (sampleEl) {
+        const cs = getComputedStyle(sampleEl);
+        // lineHeight は px で返ることが多いので parseFloat で数値化
+        lineHeightPx = parseFloat(cs.lineHeight) || 0;
+    }
+    if (!lineHeightPx) {
+        // 試しに wordDisplay の computed line-height を使う
+        const cs2 = getComputedStyle(this.wordDisplay);
+        lineHeightPx = parseFloat(cs2.lineHeight) || parseFloat(cs2.fontSize) * 2.2 || 40;
+    }
+
+    // padding を考慮（wordDisplay の上下 padding を取得）
+    const wdCs = getComputedStyle(this.wordDisplay);
+    const paddingTop = parseFloat(wdCs.paddingTop) || 0;
+    const paddingBottom = parseFloat(wdCs.paddingBottom) || 0;
+    const extra = 6; // 余裕分 px（端の切れや余白調整用）
+
+    // 最終高さを計算。必要に応じて最大値（max-height）を超えないよう clamp する
+    const desiredHeight = Math.min(
+        // 総高さ: 行数 * 行高 + padding + 余裕
+        lineCount * lineHeightPx + paddingTop + paddingBottom + extra,
+        // 最大は .word-display の CSS max-height で定義した値（例: 80vh）
+        window.innerHeight * 0.8
+    );
+
+    this.wordDisplay.style.height = `${Math.round(desiredHeight)}px`;
+}
+
 
             // --- 置換する関数開始 ---
 updateWordHighlight() {
