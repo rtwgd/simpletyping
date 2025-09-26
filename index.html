@@ -988,42 +988,43 @@ calculateLines() {
 }
 
 // --- 新規追加メソッド: 表示枠高さ調整 ---
+// 既存の adjustWordDisplayHeight() をこの実装に置き換えてください
 adjustWordDisplayHeight() {
-    // lineBreakWordIndices が空ならデフォルト高さにする
+    const MAX_LINES = 5;
+
     if (!this.lineBreakWordIndices || this.lineBreakWordIndices.length === 0) {
-        // デフォルトの高さ（2行表示相当など）を設定しておく
         this.wordDisplay.style.height = '';
         return;
     }
 
-    // 行数を計算
+    // 行数を取得（lineBreakWordIndices は各行の先頭単語インデックス）
     const lineCount = this.lineBreakWordIndices.length;
-    // 単語要素の一つから行の実際の高さ（px）を取得する
-    const sampleEl = this.wordStream.querySelector('.word');
-    // フォールバック：wordDisplay の行高スタイルを使う
+
+    // 実際に使用する行数は lineCount と MAX_LINES の小さい方
+    const usedLines = Math.min(lineCount, MAX_LINES);
+
+    // 行高(px)を取得する。まず wordStream 内の最初の word 要素から取得を試みる
     let lineHeightPx = 0;
+    const sampleEl = this.wordStream.querySelector('.word');
     if (sampleEl) {
         const cs = getComputedStyle(sampleEl);
-        // lineHeight は px で返ることが多いので parseFloat で数値化
         lineHeightPx = parseFloat(cs.lineHeight) || 0;
     }
     if (!lineHeightPx) {
-        // 試しに wordDisplay の computed line-height を使う
         const cs2 = getComputedStyle(this.wordDisplay);
         lineHeightPx = parseFloat(cs2.lineHeight) || parseFloat(cs2.fontSize) * 2.2 || 40;
     }
 
-    // padding を考慮（wordDisplay の上下 padding を取得）
+    // wordDisplay の上下 padding を考慮
     const wdCs = getComputedStyle(this.wordDisplay);
     const paddingTop = parseFloat(wdCs.paddingTop) || 0;
     const paddingBottom = parseFloat(wdCs.paddingBottom) || 0;
-    const extra = 6; // 余裕分 px（端の切れや余白調整用）
+    const extra = 6; // 微調整用余白(px)
 
-    // 最終高さを計算。必要に応じて最大値（max-height）を超えないよう clamp する
+    // 計算：使用行数 * 行高 + padding + 余白
     const desiredHeight = Math.min(
-        // 総高さ: 行数 * 行高 + padding + 余裕
-        lineCount * lineHeightPx + paddingTop + paddingBottom + extra,
-        // 最大は .word-display の CSS max-height で定義した値（例: 80vh）
+        usedLines * lineHeightPx + paddingTop + paddingBottom + extra,
+        // CSS 側の max-height でも上限がかかるためウィンドウ高さベースの安全上限も設定
         window.innerHeight * 0.8
     );
 
