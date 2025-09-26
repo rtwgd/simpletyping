@@ -291,70 +291,6 @@
             width: 0%;
             transition: width 0.3s ease;
         }
-        /* モーダル全体の背景 */
-.modal {
-  position: fixed;
-  inset: 0;
-  display: none;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0,0,0,0.6);
-  z-index: 200;
-}
-
-/* モーダル表示時 */
-.modal.show {
-  display: flex;
-}
-
-/* モーダル内コンテンツ */
-.modal-content {
-  background: #2c2e31;
-  color: #d1d0c5;
-  padding: 20px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 640px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-/* 閉じるボタン */
-.modal-close {
-  background: #e2b714;
-  color: #323437;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 4px;
-  float: right;
-  cursor: pointer;
-}
-
-/* レベル表のラッパー（横スクロール対応） */
-.level-table-wrapper {
-  overflow-x: auto;
-  margin-top: 12px;
-}
-
-/* テーブル */
-#levelTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.95rem;
-}
-#levelTable thead th {
-  text-align: left;
-  padding: 8px 10px;
-  color: #323437;
-  background: #e2b714;
-}
-#levelTable tbody td {
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-#levelTable tbody tr:nth-child(odd) {
-  background: rgba(255,255,255,0.02);
-}
-
     </style>
 </head>
 <body>
@@ -362,21 +298,8 @@
         <h1 class="title">日本語タイピング練習</h1>
         <p class="subtitle">Japanese Typing Practice</p>
     </div>
-    
-<div id="levelModal" class="modal">
-  <div class="modal-content">
-    <button id="closeLevelBtn" class="modal-close">閉じる</button>
-    <h2>レベル判定一覧</h2>
-    <div class="level-table-wrapper">
-      <table id="levelTable">
-        <thead><tr><th>Level</th><th>KPM しきい値</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-</div>
+
     <div class="controls">
-        <button id="showLevelBtn">レベル一覧</button>
         <div class="control-group">
             <label for="wordCountSelect">単語数:</label>
             <select id="wordCountSelect">
@@ -871,66 +794,7 @@
                 this.initElements();
                 this.initEventListeners();
                 this.restart();
-                // TypingTest クラス内のメソッドとして追加
-populateLevelTable() {
-    if (!this.levelTableBody) return;
-    this.levelTableBody.innerHTML = '';
-    for (const item of levelMap) {
-        const tr = document.createElement('tr');
-        const tdLevel = document.createElement('td');
-        tdLevel.textContent = item.level;
-        const tdKpm = document.createElement('td');
-        tdKpm.textContent = Math.round(item.kpm);
-        tr.appendChild(tdLevel);
-        tr.appendChild(tdKpm);
-        this.levelTableBody.appendChild(tr);
-    }
-}
-
             }
- // ----- レベル表を表示するユーティリティ -----
-function createLevelTable(levelArray) {
-    const tbody = document.querySelector('#levelTable tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    for (const item of levelArray) {
-        const tr = document.createElement('tr');
-        const tdLevel = document.createElement('td');
-        tdLevel.textContent = item.level;
-        const tdKpm = document.createElement('td');
-        tdKpm.textContent = Math.round(item.kpm);
-        tr.appendChild(tdLevel);
-        tr.appendChild(tdKpm);
-        tbody.appendChild(tr);
-    }
-}
-
-// モーダルの開閉ハンドラ登録（DOMContentLoaded 後に呼ぶ）
-document.addEventListener('DOMContentLoaded', () => {
-    // テーブル作成
-    createLevelTable(levelMap);
-
-    const showBtn = document.getElementById('showLevelBtn');
-    const modal = document.getElementById('levelModal');
-    const closeBtn = document.getElementById('closeLevelBtn');
-
-    if (showBtn && modal) {
-        showBtn.addEventListener('click', () => {
-            modal.classList.add('show');
-        });
-    }
-    if (closeBtn && modal) {
-        closeBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
-        });
-    }
-    // モーダル外クリックで閉じる
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.classList.remove('show');
-        });
-    }
-});
 
             initGame() {
                 this.words = [];
@@ -968,12 +832,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.restartBtn = document.getElementById('restartBtn');
                 this.restartBtnResults = document.getElementById('restartBtnResults');
                 this.progressFill = document.getElementById('progressFill');
-                // initElements() の末尾に追加
-                this.showLevelBtn = document.getElementById('showLevelBtn');
-                this.levelModal = document.getElementById('levelModal');
-                this.closeLevelBtn = document.getElementById('closeLevelBtn');
-                this.levelTableBody = document.querySelector('#levelTable tbody');
-
             }
 
             initEventListeners() {
@@ -992,25 +850,6 @@ window.addEventListener('resize', () => {
     this.calculateLines();
     this.adjustWordDisplayHeight();
 });
-                // initEventListeners() の末尾に追加
-if (this.showLevelBtn && this.levelModal) {
-    this.showLevelBtn.addEventListener('click', () => {
-        // テーブルを最新化してから表示
-        this.populateLevelTable();
-        this.levelModal.classList.add('show');
-    });
-}
-if (this.closeLevelBtn && this.levelModal) {
-    this.closeLevelBtn.addEventListener('click', () => {
-        this.levelModal.classList.remove('show');
-    });
-}
-if (this.levelModal) {
-    this.levelModal.addEventListener('click', (e) => {
-        if (e.target === this.levelModal) this.levelModal.classList.remove('show');
-    });
-}
-
 
             }
 
@@ -1378,7 +1217,6 @@ updateWordHighlight() {
 
         document.addEventListener('DOMContentLoaded', init);
     })();
-       
     </script>
 </body>
 </html>
