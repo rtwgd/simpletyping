@@ -927,6 +927,49 @@ window.addEventListener('resize', () => {
     this.calculateLines();
     this.adjustWordDisplayHeight();
 });
+ // ----- レベル表を表示するユーティリティ -----
+function createLevelTable(levelArray) {
+    const tbody = document.querySelector('#levelTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    for (const item of levelArray) {
+        const tr = document.createElement('tr');
+        const tdLevel = document.createElement('td');
+        tdLevel.textContent = item.level;
+        const tdKpm = document.createElement('td');
+        tdKpm.textContent = Math.round(item.kpm);
+        tr.appendChild(tdLevel);
+        tr.appendChild(tdKpm);
+        tbody.appendChild(tr);
+    }
+}
+
+// モーダルの開閉ハンドラ登録（DOMContentLoaded 後に呼ぶ）
+document.addEventListener('DOMContentLoaded', () => {
+    // テーブル作成
+    createLevelTable(levelMap);
+
+    const showBtn = document.getElementById('showLevelBtn');
+    const modal = document.getElementById('levelModal');
+    const closeBtn = document.getElementById('closeLevelBtn');
+
+    if (showBtn && modal) {
+        showBtn.addEventListener('click', () => {
+            modal.classList.add('show');
+        });
+    }
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('show');
+        });
+    }
+    // モーダル外クリックで閉じる
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('show');
+        });
+    }
+});
 
             }
 
@@ -1294,50 +1337,7 @@ updateWordHighlight() {
 
         document.addEventListener('DOMContentLoaded', init);
     })();
-        // ----- レベル表を表示するユーティリティ -----
-function createLevelTable(levelArray) {
-    const tbody = document.querySelector('#levelTable tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    for (const item of levelArray) {
-        const tr = document.createElement('tr');
-        const tdLevel = document.createElement('td');
-        tdLevel.textContent = item.level;
-        const tdKpm = document.createElement('td');
-        tdKpm.textContent = Math.round(item.kpm);
-        tr.appendChild(tdLevel);
-        tr.appendChild(tdKpm);
-        tbody.appendChild(tr);
-    }
-}
-
-// モーダルの開閉ハンドラ登録（DOMContentLoaded 後に呼ぶ）
-document.addEventListener('DOMContentLoaded', () => {
-    // テーブル作成
-    createLevelTable(levelMap);
-
-    const showBtn = document.getElementById('showLevelBtn');
-    const modal = document.getElementById('levelModal');
-    const closeBtn = document.getElementById('closeLevelBtn');
-
-    if (showBtn && modal) {
-        showBtn.addEventListener('click', () => {
-            modal.classList.add('show');
-        });
-    }
-    if (closeBtn && modal) {
-        closeBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
-        });
-    }
-    // モーダル外クリックで閉じる
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.classList.remove('show');
-        });
-    }
-});
-
+       
     </script>
 </body>
 </html>
