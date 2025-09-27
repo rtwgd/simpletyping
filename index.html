@@ -1207,7 +1207,7 @@
                             untyped_parts.push(word);
                         }
                     }
-                    untypedForDisplay = untyped_parts.join('　');
+                    untypedForDisplay = untyped_parts.join('  ');
 
                     // Rebuild the typed part with spaces for display
                     const typed_parts = [];
@@ -1226,7 +1226,7 @@
                             typed_parts.push(word);
                         }
                     }
-                    typedForDisplay = typed_parts.join('　');
+                    typedForDisplay = typed_parts.join('  ');
 
                     // Add a trailing space to the typed part if a word was just completed
                     const atWordBoundary = this.wordBoundaries.some(b => b.endIndex === typedLength);
