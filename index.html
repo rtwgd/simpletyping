@@ -1159,7 +1159,7 @@
                             const firstWordIndexOfTargetLine = this.lineBreakWordIndices[scrollToLineIndex];
                             const firstWordEl = this.wordBoundaries[firstWordIndexOfTargetLine].element;
                             const scrollAmount = firstWordEl.offsetTop - this.wordBoundaries[0].element.offsetTop;
-                            const extraScroll = 2;
+                            const extraScroll = 3;
                             this.wordStream.style.transform = `translateY(-${scrollAmount + extraScroll}px)`;
                             this.lastScrolledLine = scrollToLineIndex;
                         }
