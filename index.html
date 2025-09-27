@@ -149,6 +149,7 @@
             transition: color 0.2s;
             max-width: 100%;
             box-sizing: border-box;
+            margin-right: 8px; /* 単語の右側に8pxの余白を追加 */
         }
 
 
@@ -519,51 +520,36 @@
         function devideIntoChunk(kana) {
             const ret = [];
             for (let i = 0; i < kana.length; ++i) {
-                // 最後の1文字ならそのまま追加
                 if (i >= kana.length - 1) {
                     ret.push(new Chunk(kana[i]));
                     break;
                 }
-
-                const cur = kana[i];
-                const next = kana[i + 1];
-                const next2 = kana[i + 2];
-
-                // 普通の（促音/撥音以外の）処理
-                if (cur !== "っ" && cur !== "ん") {
-                    // 拗音などの2文字パターンが存在すれば2文字チャンク
-                    if (ChunkPattern.list.has(cur + next)) {
-                        ret.push(new Chunk(cur + next));
-                        ++i;
-                    } else {
-                        ret.push(new Chunk(cur));
+                if (kana[i] !== "っ" && kana[i] !== "ん") {
+                    if (!ChunkPattern.list.has(kana[i] + kana[i + 1])) {
+                        ret.push(new Chunk(kana[i]));
                     }
-                    continue;
+                    else {
+                        ret.push(new Chunk(kana[i] + kana[i + 1]));
+                        ++i;
+                    }
                 }
-
-                // ここから cur が "っ" または "ん" の処理
-                // 末尾に近ければ、安全に残りを1チャンクにする
-                if (i >= kana.length - 2) {
-                    // 残りが2文字ならそれを結合して1チャンクに（例: "っ" + 最後の仮名）
-                    ret.push(new Chunk(cur + next));
-                    if (i === kana.length - 2) ++i;
-                    break;
-                }
-
-                // next + next2 がチャンクとして存在するか（拗音など）
-                if (ChunkPattern.list.has(next + next2)) {
-                    // 例: "っ" + "きゃ" -> "っきゃ"
-                    ret.push(new Chunk(cur + next + next2));
-                    i += 2;
-                } else {
-                    // next 単体がチャンクとして存在する場合（普通の仮名）
-                    ret.push(new Chunk(cur + next));
-                    ++i;
+                else {
+                    if (i >= kana.length - 2) {
+                        ret.push(new Chunk(kana[i] + kana[i + 1]));
+                        break;
+                    }
+                    if (!ChunkPattern.list.has(kana[i + 1] + kana[i + 2])) {
+                        ret.push(new Chunk(kana[i] + kana[i + 1]));
+                        ++i;
+                    }
+                    else {
+                        ret.push(new Chunk(kana[i] + kana[i + 1] + kana[i + 2]));
+                        i += 2;
+                    }
                 }
             }
             return ret;
         }
-
 
         class TypePattern {
             constructor(romanList) {
@@ -750,62 +736,71 @@
                 this.chunks = devideIntoChunk(kana);
                 this.chunkIndex = 0;
             }
-// --- 以下のコードに全体を置き換えてください ---
-            update(key) {
+
+                                    update(key) {
                 if (this.isFinished()) return { isCorrect: false };
 
                 const currentChunk = this.chunks[this.chunkIndex];
-                // まずは通常の更新を試す
-                const isCorrect = currentChunk.update(key);
+                // 普通の更新をまず試す
+                let isCorrect = currentChunk.update(key);
 
-                // 通常の更新で正解だった場合、または不正解でも促音の特別処理が不要な場合は、
-                // チャンクが完了したかチェックして先に進む
-                if (isCorrect || !currentChunk.kana.startsWith('っ')) {
-                    if (currentChunk.isChunkFinished) { // 正しいプロパティアクセス
-                        this.chunkIndex++;
-                    }
-                    return { isCorrect, isFinished: this.isFinished() };
-                }
+                // もし通常更新で不正と判定され、かつ現在チャンクが促音（っ）を先頭に持つとき、
+                // 次チャンクの期待する先頭文字が今回の入力キーと一致すれば促音処理を強制する
+                if (!isCorrect) {
+                    const nextChunk = this.chunks[this.chunkIndex + 1];
+                    if (currentChunk && typeof currentChunk.kana === 'string' && currentChunk.kana[0] === 'っ' && nextChunk) {
+                        try {
+                            const tplContainer = nextChunk._typePatternList;
+                            const tpl = tplContainer && tplContainer._typePatternList;
+                            if (tpl && tpl.length > 0) {
+                                // nextChunk のいずれかの TypePattern が現在期待している文字（getCurChar）が key と一致するかを調べる
+                                let matchNextFirstChar = false;
+                                for (const tp of tpl) {
+                                    const c = (tp.getCurChar && tp.getCurChar()) || '';
+                                    if (c === key) {
+                                        matchNextFirstChar = true;
+                                        break;
+                                    }
+                                }
+                                if (matchNextFirstChar) {
+                                    // --- ここで促音チャンクを強制的に完了扱いにする ---
+                                    // currentChunk._kanaCount を直接操作して促音を完了させる
+                                    // （Chunk クラスのゲッターは kanaCount を参照しているため、これで完了扱いになる）
+                                    try {
+                                        currentChunk._kanaCount = currentChunk._kana.length;
+                                    } catch (e) {
+                                        // 何か失敗しても先に進めないだけなので無視
+                                    }
+                                    // chunkIndex を進めて次チャンクに移る
+                                    this.chunkIndex++;
 
-                // --- ここからが促音「っ」の特別処理 ---
-                // 通常更新で不正解(isCorrect=false) かつ、現在のチャンクが「っ」で始まる場合
-                const nextChunk = this.chunks[this.chunkIndex + 1];
-
-                // 次のチャンクが存在し、その先頭文字が今回のキー入力と一致する場合
-                // (例：「かって」で「か」の次に「t」を入力した状況)
-                if (nextChunk) {
-                    try {
-                        // 次のチャンクが期待するローマ字の最初の文字を取得
-                        const tplContainer = nextChunk._typePatternList;
-                        const tpl = tplContainer && tplContainer._typePatternList;
-                        if (tpl && tpl.length > 0) {
-                             // いずれかのパターンがキーと一致するかチェック
-                            let matchNextFirstChar = false;
-                            for (const tp of tpl) {
-                                if (tp.isValid && (tp.getCurChar() === key)) {
-                                    matchNextFirstChar = true;
-                                    break;
+                                    // 同じ key を次チャンクへ再帰的に適用して消費させる
+                                    if (!this.isFinished()) {
+                                        return this.update(key);
+                                    } else {
+                                        // 次チャンクが存在しない場合は成功扱いにする
+                                        return { isCorrect: true, isFinished: this.isFinished() };
+                                    }
                                 }
                             }
-
-                            if (matchNextFirstChar) {
-                                // 現在の促音チャンクを強制的に完了させ、インデックスを進める
-                                currentChunk._kanaCount = currentChunk.kana.length;
-                                this.chunkIndex++;
-                                // 同じキーで、次のチャンクに対して再度updateを呼び出す（再帰処理）
-                                return this.update(key);
-                            }
+                        } catch (err) {
+                            // 内部アクセスに失敗した場合は通常の不正扱いに落とす
                         }
-                    } catch (e) {
-                        // エラーが発生した場合は、単純に不正解として返す
-                        return { isCorrect: false, isFinished: this.isFinished() };
                     }
                 }
-                
-                // どの条件にも当てはまらなかった場合（単純なタイプミスなど）
-                // 最初の判定結果(isCorrect = false)を返す
-                return { isCorrect, isFinished: this.isFinished() };
+
+                // currentChunk が完了していれば index を進める（通常経路）
+                if (currentChunk.isChunkFinished) {
+                    this.chunkIndex++;
+                }
+
+                return {
+                    isCorrect,
+                    isFinished: this.isFinished(),
+                };
             }
+
+
 
             isFinished() {
                 return this.chunkIndex >= this.chunks.length;
@@ -930,6 +925,7 @@
                 return parseInt(this.timeLimitSelect.value);
             }
 
+            // --- 修正箇所: handleKeyDownメソッド全体を新しいロジックに置き換え ---
             handleKeyDown(e) {
                 const target = e.target;
                 if (target.tagName === 'INPUT' || target.tagName === 'SELECT') {
@@ -951,105 +947,51 @@
                 }
                 
                 if (e.key === 'Backspace') {
-                    return; // Backspace not supported in this version
+                    return; // このバージョンではバックスペースはサポートしない
                 }
 
-                if (e.key.length > 1 && e.key !== ' ') return;
+                // スペース必須がオフの場合、スペース入力を無視する
+                const key = e.key.toLowerCase();
+                if (!this.spaceToggle.checked && key === ' ') {
+                     // スペースは単語の区切りではないため、タイピング文字として扱わない
+                     return;
+                }
+                
+                if (key.length > 1 && key !== ' ') return;
 
                 this.totalTypedChars++;
-                const key = e.key.toLowerCase();
 
+                // --- 新しいロジック START ---
+                // 1. キー入力前の状態を記録する
+                const prevTypedKana = this.wordTyper.getTypedKana();
+                // スペース必須でない場合は wordBoundaries を使わないため prevBoundary は不要
+
+                // 2. キー入力を処理する
                 const result = this.wordTyper.update(key);
 
-                let isCorrectInput = result.isCorrect;
-                
-                // 修正: 正解/不正解をカウント
-                if (isCorrectInput) {
+                if (result.isCorrect) {
                     this.correctTypedKeys++;
                 } else {
                     this.incorrectChars++;
                 }
+
+                // 3. キー入力後の状態を取得する
+                const currentTypedKana = this.wordTyper.getTypedKana();
                 
-                // ----------------------------------------------------
-                // ★★★ 暫定的な単語完了の自動補完ロジックを追加 ★★★
-                // ----------------------------------------------------
-                const typedKana = this.wordTyper.getTypedKana();
-                const totalKanaLength = this.fullKanaString.length;
-                
-                // 誤答判定であり、かつ単語の終端に近い場合（例: 最後3文字以内）
-                if (!isCorrectInput && !this.spaceToggle.checked && typedKana.length > totalKanaLength - 3 && typedKana.length < totalKanaLength) {
-                    
-                    // 次の単語に進むために、強制的に残りのカナを入力済みにする
-                    // （これは最後の単語にのみ影響します）
-                    
-                    // 単語の境界を見つける
-                    const currentBoundaryIndex = this.wordBoundaries.findIndex(b => typedKana.length < b.endIndex);
-                    if (currentBoundaryIndex !== -1) {
-                        const currentBoundary = this.wordBoundaries[currentBoundaryIndex];
-                        // 最後の単語まで来ている場合、残りのカナを強制的に完了させる
-                        if (currentBoundary.endIndex > typedKana.length) {
-                             // ここでは WordTyper の状態を直接変更せず、以下のスペース自動入力に任せる
+                // 4. スペース入力を必須にする場合のみ、単語完了後のスペース自動入力/強制を処理する
+                if (this.spaceToggle.checked) {
+                    // 4.1. タイプ前後で文字が進んでいる場合のみ、単語境界をチェックする
+                    if (currentTypedKana.length > prevTypedKana.length) {
+                        const prevBoundary = this.wordBoundaries.find(b => b.endIndex === prevTypedKana.length);
+                        const currentBoundary = this.wordBoundaries.find(b => b.endIndex === currentTypedKana.length);
+
+                        // 4.2. 以前は境界ではなく、現在が境界である場合（＝単語を打ち終わった瞬間）
+                        if (!prevBoundary && currentBoundary) {
+                            // 単語が完了してもスペースは自動入力しない
                         }
                     }
                 }
-                // ----------------------------------------------------
-                // ★★★ 暫定的な単語完了の自動補完ロジックの終わり ★★★
-                // ----------------------------------------------------
-
-
-                // 単語が完了したかどうかのチェック (元のロジック)
-                // 誤答であっても、現在の入力文字数が単語の境界に達していればOKとする
-                // ただし、これは誤答時に `typedKana` が進まないため機能しません。
-                // そこで、強制的に次の単語の先頭にいるかチェックします。
-
-                // 単語の境界に達しているかを判定する新しい基準
-                // (これは `boundary` の定義をそのまま使用します)
-                const boundary = this.wordBoundaries.find(b => b.endIndex === typedKana.length);
-
-
-                if (!this.wordTyper.isFinished() && !this.spaceToggle.checked) {
-                    
-                    // 誤答であっても、現在のチャンクが単語の最後のチャンクであれば、
-                    // 強制的に単語全体を完了させてスペースを入力するようにします。
-                    
-                    let shouldAutoAdvance = false;
-                    
-                    // 1. 正しく単語の終端に到達した (boundary が見つかる)
-                    if (boundary) {
-                        shouldAutoAdvance = true;
-                    } 
-                    // 2. 促音を含む単語の最後に近く、入力文字数が単語の長さから2文字以内の場所でミスした
-                    else if (!isCorrectInput) {
-                         // 現在のカーソル位置の前にある単語の境界を見つける
-                        const currentWordBoundary = this.wordBoundaries.find(b => typedKana.length <= b.endIndex && typedKana.length >= b.startIndex);
-                        
-                        if (currentWordBoundary) {
-                            const remaining = currentWordBoundary.endIndex - typedKana.length;
-                            // 単語の残り文字数が少ない状態でミスした場合、自動完了を試みる
-                            if (remaining <= 2 && remaining > 0) {
-                                shouldAutoAdvance = true;
-                                
-                                // ここで強制的にカナ数を進める処理
-                                this.wordTyper.chunks[this.wordTyper.chunkIndex]._kanaCount = 
-                                    this.wordTyper.chunks[this.wordTyper.chunkIndex].kana.length;
-                                this.wordTyper.chunkIndex++;
-                                
-                                // 強制完了後、新しい typedKana を再計算
-                                typedKana = this.wordTyper.getTypedKana();
-                            }
-                        }
-                    }
-
-                    // 最終的に自動進行のフラグが立ったら、スペースを強制入力
-                    if (shouldAutoAdvance && this.fullKanaString[typedKana.length] === '　') {
-                        // 2回 update を呼び出すことで、次の単語のスペースのチャンクも完了させる
-                        this.wordTyper.update(' '); 
-                        this.correctTypedKeys++;
-                        // 自動入力が成功したら、次の単語の先頭をハイライトするために updateWordHighlight を呼び出す
-                        this.updateWordHighlight(); 
-                    }
-                }
-                
+                // --- 新しいロジック END ---
 
                 this.updateScrolling();
                 this.updateWordHighlight();
@@ -1068,9 +1010,12 @@
 
                 this.wordBoundaries = [];
                 let currentKanaLength = 0;
+                const isSpaceRequired = this.spaceToggle.checked;
 
                 const kanaParts = this.words.map(w => w.kana.join(''));
-                this.fullKanaString = kanaParts.join('　');
+                
+                // スペース入力を必須にするかどうかで fullKanaString の作成方法を変える
+                this.fullKanaString = isSpaceRequired ? kanaParts.join('　') : kanaParts.join('');
 
                 // クリア
                 this.wordStream.innerHTML = '';
@@ -1082,9 +1027,15 @@
                     wordEl.className = 'word';
                     wordEl.textContent = word.text;
                     this.wordStream.appendChild(wordEl);
-                    // DOM 上で単語と単語の間にスペースを入れる（見た目用）
-                    const space = document.createTextNode(' ');
-                    this.wordStream.appendChild(space);
+                    
+                    // --- 修正箇所: ここから ---
+                    // 最後の単語でなければ、スペース必須の有無に関わらず、
+                    // DOM上での視覚的な区切りとしてスペース文字（createTextNode(' ')）を追加する
+                    if (index < this.words.length - 1) {
+                         const space = document.createTextNode(' ');
+                         this.wordStream.appendChild(space);
+                    }
+                    // --- 修正箇所: ここまで ---
 
                     const kanaLength = kanaParts[index].length;
                     this.wordBoundaries.push({
@@ -1092,7 +1043,9 @@
                         endIndex: currentKanaLength + kanaLength,
                         element: wordEl
                     });
-                    currentKanaLength += kanaLength + 1; // +1 for the space in fullKanaString
+                    
+                    // fullKanaString に含まれるスペース分を加算（これはスペース必須の場合のみ）
+                    currentKanaLength += kanaLength + (isSpaceRequired ? 1 : 0);
                 });
 
                 // WordTyper を作る前にレイアウト情報を確定する
@@ -1206,7 +1159,8 @@
                             const firstWordIndexOfTargetLine = this.lineBreakWordIndices[scrollToLineIndex];
                             const firstWordEl = this.wordBoundaries[firstWordIndexOfTargetLine].element;
                             const scrollAmount = firstWordEl.offsetTop - this.wordBoundaries[0].element.offsetTop;
-                            this.wordStream.style.transform = `translateY(-${scrollAmount}px)`;
+                            const extraScroll = 2;
+                            this.wordStream.style.transform = `translateY(-${scrollAmount + extraScroll}px)`;
                             this.lastScrolledLine = scrollToLineIndex;
                         }
                     } else {
@@ -1227,12 +1181,65 @@
                 if (!this.wordTyper) return;
 
                 const typed = this.wordTyper.getTypedKana();
-                const untyped = this.fullKanaString.substring(typed.length);
+                const typedLength = typed.length;
+                
+                let untypedForDisplay;
+                let typedForDisplay;
+
+                if (this.spaceToggle.checked) {
+                    untypedForDisplay = this.fullKanaString.substring(typedLength);
+                    typedForDisplay = typed;
+                } else {
+                    // Rebuild the untyped part with spaces for display
+                    const untyped_parts = [];
+                    for (const boundary of this.wordBoundaries) {
+                        if (boundary.endIndex <= typedLength) {
+                            continue; // Already typed
+                        }
+                        
+                        const word = this.fullKanaString.substring(boundary.startIndex, boundary.endIndex);
+
+                        if (boundary.startIndex < typedLength) {
+                            // Partially typed word, take the untyped part
+                            untyped_parts.push(word.substring(typedLength - boundary.startIndex));
+                        } else {
+                            // Fully untyped word
+                            untyped_parts.push(word);
+                        }
+                    }
+                    untypedForDisplay = untyped_parts.join(' ');
+
+                    // Rebuild the typed part with spaces for display
+                    const typed_parts = [];
+                    for (const boundary of this.wordBoundaries) {
+                        if (boundary.startIndex >= typedLength) {
+                            break; // Stop when we reach untyped words
+                        }
+                        
+                        const word = this.fullKanaString.substring(boundary.startIndex, boundary.endIndex);
+
+                        if (boundary.endIndex > typedLength) {
+                            // Partially typed word
+                            typed_parts.push(word.substring(0, typedLength - boundary.startIndex));
+                        } else {
+                            // Fully typed word
+                            typed_parts.push(word);
+                        }
+                    }
+                    typedForDisplay = typed_parts.join(' ');
+
+                    // Add a trailing space to the typed part if a word was just completed
+                    const atWordBoundary = this.wordBoundaries.some(b => b.endIndex === typedLength);
+                    const isNotTheEnd = typedLength < this.fullKanaString.length;
+                    if (atWordBoundary && isNotTheEnd) {
+                        typedForDisplay += '　';
+                    }
+                }
 
                 this.kanaStream.innerHTML = 
-                    `<span class="typed">${typed}</span>` +
+                    `<span class="typed">${typedForDisplay}</span>` +
                     `<span id="cursor"></span>` +
-                    `<span class="untyped">${untyped}</span>`;
+                    `<span class="untyped">${untypedForDisplay}</span>`;
 
                 const cursorEl = document.getElementById('cursor');
                 if (cursorEl) {
