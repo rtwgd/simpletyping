@@ -338,6 +338,9 @@
         <h1 class="title">日本語タイピング練習</h1>
         <p class="subtitle">Japanese Typing Practice</p>
     </div>
+    <div id="bestRecord" style="margin-top:12px; text-align:center; color:#d1d0c5; font-size:0.95rem;">
+      ベスト: - (単語:- / KPM:- / KPS:-)
+    </div>
 
     <div class="controls">
         <div class="control-group">
@@ -844,6 +847,66 @@
         }
 
         class TypingTest {
+            // --- Best record save/load (localStorage) ---
+const BEST_RECORD_KEY = 'typingBestRecordV1';
+
+function loadBestRecord() {
+    try {
+        const raw = localStorage.getItem(BEST_RECORD_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (obj && typeof obj.kpm === 'number') return obj;
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveBestRecord(record) {
+    try {
+        localStorage.setItem(BEST_RECORD_KEY, JSON.stringify(record));
+    } catch (e) {
+        // 保存できない場合は無視
+    }
+}
+
+function formatBestRecordText(record) {
+    if (!record) return 'ベスト: - (単語:- / KPM:- / KPS:-)';
+    return `ベスト: ${record.level} (単語:${record.wordCount} / KPM:${Math.round(record.kpm)} / KPS:${record.kps.toFixed(2)})`;
+}
+
+function renderBestRecord() {
+    const el = document.getElementById('bestRecord');
+    if (!el) return;
+    const best = loadBestRecord();
+    el.textContent = formatBestRecordText(best);
+}
+
+// 更新判定: より高い kpm を上位とする。kpm が同じなら kps を比較。
+function isBetterRecord(current, best) {
+    if (!best) return true;
+    if (current.kpm > best.kpm) return true;
+    if (current.kpm === best.kpm && current.kps > best.kps) return true;
+    return false;
+}
+
+// --- TypingTest.showResults 内で呼び出す補助関数 ---
+// currentRecord は { level, wordCount, kpm, kps, accuracy, elapsedSeconds, timestamp }
+function tryUpdateBestRecord(currentRecord) {
+    const best = loadBestRecord();
+    if (isBetterRecord(currentRecord, best)) {
+        saveBestRecord(currentRecord);
+        renderBestRecord();
+        // 簡単な視覚フィードバック（results モーダル内に短く表示）
+        const note = document.createElement('div');
+        note.style.marginTop = '8px';
+        note.style.color = '#e2b714';
+        note.textContent = 'New Best! 🎉';
+        const resultsContent = document.querySelector('.results-content');
+        if (resultsContent) resultsContent.appendChild(note);
+    }
+}
+
             constructor(wordsData) {
                 this.allWords = wordsData;
                 this.initGame();
@@ -1322,6 +1385,21 @@
                 document.getElementById('finalTime').textContent = `${Math.round(elapsedSeconds)}s`;
 
                 this.results.classList.add('show');
+                // --- ベスト記録更新の判定と保存 ---
+const elapsedSeconds = (this.endTime - this.startTime) / 1000;
+const currentRecord = {
+    level: level,
+    wordCount: this.getWordCount(),
+    kpm: kpm,
+    kps: kps,
+    accuracy: accuracy,
+    elapsedSeconds: elapsedSeconds,
+    timestamp: Date.now()
+};
+tryUpdateBestRecord(currentRecord);
+
+this.results.classList.add('show');
+
             }
 
             restart() {
@@ -1375,6 +1453,12 @@
             init();
             populateLevelChart();
         });
+        document.addEventListener('DOMContentLoaded', () => {
+    init();
+    populateLevelChart();
+    renderBestRecord(); // ベストを表示
+});
+
     })();
     </script>
 </body>
