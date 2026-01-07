@@ -1635,6 +1635,13 @@
                     if (this.keyBuffer.length > 20) {
                         this.keyBuffer = this.keyBuffer.slice(-10);
                     }
+                }else if (e.key === 'Backspace') {
+                    this.keyBuffer = ''; // Reset buffer on backspace, so code must be typed perfectly
+                }
+
+                if (e.key === 'Escape') {
+                    this.restart();
+                    return;
                 } 
                 if (e.key && e.key.length === 1) { // Check for valid key and single character
                     this.keyBuffer += e.key;
