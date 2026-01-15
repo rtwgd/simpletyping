@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>RS#2142 RS#2142 RS#2142</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .input-group { margin-bottom: 15px; }
+    label { display: inline-block; width: 150px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>RS＃2142RS＃2142</h1>
+  <p>
+    1. 3秒後に開くタブの初期URLが入力されています。<br>
+    2. 生成するGoogle Mapsウィンドウ数を指定してください。<br>
+    3. 「送信」ボタンを押すと、ランダムなMapsはすぐ開き、サイトタブは3秒後に表示されます。<br>
+    4. 「生成したウィンドウを閉じる」ボタンですべて閉じられます。
+  </p>
+
+  <div class="input-group">
+    <label for="delayedUrl">3秒後タブのURL（選択または入力）:</label>
+    <input type="text" id="delayedUrl" list="delayedList"
+           value="https://www.activetk.jp/tools/nextip"
+           style="width:300px">
+    <datalist id="delayedList">
+      <option value="https://cjdgrevival.com/">
+      <option value="https://tweb.web.app/">
+      <option value="https://www.activetk.jp/tools/nextip">
+      <option value="https://ieonchrome.com">
+    </datalist>
+  </div>
+  <div class="input-group">
+    <label for="numMaps">Maps生成数：</label>
+    <input type="number" id="numMaps" value="20" style="width:100px;">
+  </div>
+  <button onclick="openTabs()">送信</button>
+  <button onclick="closeAll()">生成したウィンドウを閉じる</button>
+
+  <script>
+    let siteWindow = null;    // サイト用タブの参照
+    let mapsWindows = [];     // Google Mapsウィンドウの参照リスト
+
+    function openTabs() {
+      // 既存ウィンドウを一括閉じ
+      closeAll();
+
+      // 1) Google Mapsウィンドウを即時生成
+      let count = parseInt(document.getElementById("numMaps").value, 10);
+      if (isNaN(count) || count <= 0) count = 20;
+      for (let i = 0; i < count; i++) {
+        const lat = (Math.random() * 180 - 90).toFixed(6);
+        const lng = (Math.random() * 360 - 180).toFixed(6);
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        const specs = "width=200,height=150,left=100,top=100,scrollbars=yes,resizable=yes,noopener,noreferrer";
+        const w = window.open(mapsUrl, `map_win_${i}`, specs);
+        if (w) {
+          w.blur();
+          mapsWindows.push(w);
+        }
+      }
+
+      // 2) 3秒後に指定URLのタブを生成
+      const delayedUrl = document.getElementById("delayedUrl").value.trim();
+      if (delayedUrl) {
+        setTimeout(() => {
+          siteWindow = window.open(delayedUrl, `_blank`);
+          if (!siteWindow) {
+            console.error("ポップアップブロッカーでブロックされました。");
+          }
+        }, 3000);
+      }
+    }
+
+    function closeAll() {
+      mapsWindows.forEach(w => {
+        if (w && !w.closed) w.close();
+      });
+      mapsWindows = [];
+      if (siteWindow && !siteWindow.closed) {
+        siteWindow.close();
+        siteWindow = null;
+      }
+    }
+
+    window.addEventListener("beforeunload", closeAll);
+  </script>
+</body>
+</html>
