@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Test </title>
+</head>
+<body>
+    <h1>Memory Crash Test</h1>
+    <p>ボタンを押すとメモリを消費し続け、最終的にクラッシュします。</p>
+    <button onclick="consumeMemory()">メモリ消費開始</button>
+
+    <script>
+        function consumeMemory() {
+            const arr = [];
+            let i = 0;
+            console.log("Memory consumption starting...");
+            
+            // ノンブロッキングで実行し、UIを更新しつつ死ぬまで繰り返す
+            function grow() {
+                // 一度に大量のデータをプッシュ
+                for (let j = 0; j < 10000; j++) {
+                    arr.push(new Array(1000).fill('test data string ' + i));
+                }
+                i++;
+                // 次の描画タイミングで再実行（これによりプロセスが徐々に重くなる様子が見える）
+                requestAnimationFrame(grow);
+            }
+            grow();
+        }
+    </script>
+</body>
+</html>
